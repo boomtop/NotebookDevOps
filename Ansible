@@ -1,0 +1,157 @@
+ОБЩИЕ ССЫЛКИ
+
+https://rotoro-cloud.github.io/
+https://hamsterden.ru/practical-examples-of-playbooks/              -- развернуто по плейбукам
+https://hamsterden.ru/category/ansible/
+
+
+
+ansible.cgf -- конфигуционый файл 
+    [defaults]
+    host_key_checking = false  -- отключение проверки хеншейка
+    inventory = /home/boom/hosts  -- файл инвентори по умолчанию
+
+
+Файл inventary
+  название любое, потом через флаг -i @name@
+  
+  
+##################### Sample Inventory File ############################
+# Web Servers
+web_node1 ansible_host=web01.xyz.com ansible_connection=winrm ansible_user=administrator ansible_password=Win$Pass
+web_node2 ansible_host=web02.xyz.com ansible_connection=winrm ansible_user=administrator ansible_password=Win$Pass
+web_node3 ansible_host=web03.xyz.com ansible_connection=winrm ansible_user=administrator ansible_password=Win$Pass
+
+# DB Servers
+sql_db1 ansible_host=sql01.xyz.com ansible_connection=ssh ansible_user=root ansible_ssh_pass=Lin$Pass
+sql_db2 ansible_host=sql02.xyz.com ansible_connection=ssh ansible_user=root ansible_ssh_pass=Lin$Pass
+
+# Groups
+[db_nodes]
+sql_db1
+sql_db2
+
+[web_nodes]
+web_node1
+web_node2
+web_node3
+
+[boston_nodes]
+sql_db1
+web_node1
+
+[dallas_nodes]
+sql_db2
+web_node2
+web_node3
+
+[us_nodes:children]    - включение групп в группу
+boston_nodes
+dallas_nodes
+--------------------- Можно вынести для групп переменные в отдельный каталог отдельными файлами
+
+
+############################################################################################################################
+
+
+********************** Команда автоматической установки публичного ключа пользователя root на все узлы с авторизацией по паролю***************************
+
+ansible all -m authorized_key -a "user=root key='{{ lookup('file', '/root/.ssh/id_rsa.pub') }}' path=/root/.ssh/authorized_keys manage_dir=no" --ask-pass -i /root/ansible-inventory/my-test-servers.inventory
+
+############################################################################################################################
+
+ansible-playbook -i NAMEBOOK.yml
+
+============================== Плейбук с несколькими командами на несколько групп =========================
+-
+    name: 'Stop the web services on web server nodes'
+    hosts: web_nodes
+    tasks:
+        -
+            name: 'Stop the web services on web server nodes'
+            command: 'service httpd stop'
+-
+    name: 'Shutdown the database services on db server nodes'
+    hosts: db_nodes
+    tasks:
+        -
+            name: 'Shutdown the database services on db server nodes'
+            command: 'service mysql stop'
+-
+    name: 'Restart all servers (web and db) at once'
+    hosts: all_nodes
+    tasks:
+        -
+            name: 'Restart all servers (web and db) at once'
+            command: '/sbin/shutdown -r'
+-
+    name: 'Start the database services on db server nodes'
+    hosts: db_nodes
+    tasks:
+        -
+            name: 'Start the database services on db server nodes'
+            command: 'service mysql start'
+-
+    name: 'Start the web services on web server nodes'
+    hosts: web_nodes
+    tasks:
+        -
+            name: 'Start the web services on web server nodes'
+            command: 'service httpd start'
+############################################################################################################################
+
+модули shell и command похожи в том, что они используются для выполнения команд в управляемых системах. 
+Однако, модуль shell выполняет команду внутри оболочки целевой системы, в которой нам доступны переменные окружения и редиректы при помощи ">>"
+
+****************
+https://docs.ansible.com/ansible/latest/collections/ansible/builtin/service_module.html
+https://docs.ansible.com/ansible/latest/collections/ansible/builtin/lineinfile_module.html
+https://docs.ansible.com/ansible/latest/collections/ansible/builtin/user_module.html
+https://docs.ansible.com/ansible/latest/collections/ansible/builtin/script_module.html
+*****************
+
+
+============================== перечисление из переменной LOOPS ===============================================
+
+-   name: 'Install required packages'
+    hosts: localhost                             --- пишутся группы/ПК куда применять
+    vars:
+        packages:
+            - httpd
+            - binutils
+            - glibc
+            - ksh
+            - libaio
+            - libXext
+            - gcc
+            - make
+            - sysstat
+            - unixODBC
+            - mongodb
+            - nodejs
+            - grunt
+    tasks:
+        -
+            yum: 'name={{item}} state=present'
+            with_items: '{{packages}}'
+############################################################################################################################
+
+############################################ VARS переменные ###################################################################
+    hosts: localhost
+    vars:
+        car_model: 'BMW M3'
+        country_name: USA
+        title: 'Systems Engineer'
+    tasks:
+    
+    Переменные можно хранить в инвентори в одной строчке с определенным хостом и обращаться к ним просто '{{ snmp_port }}'   -кавычки обязательно
+    
+############################################################################################################################
+    
+    
+############################################### РОЛИ #############################################################
+
+ansible-galaxy init NAME_ROLE    - создаст папку с названием роли
+
+
+
